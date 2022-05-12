@@ -1,0 +1,6 @@
+[submodule "Scurses"]
+	path = Scurses
+	url = git@github.com:Tenchi2xh/Scurses.git
+[submodule "lanterna"]
+	path = lanterna
+	url = https://github.com/zyuiop/lanterna.git
