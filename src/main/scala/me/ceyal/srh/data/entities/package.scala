@@ -2,12 +2,12 @@ package me.ceyal.srh.data
 
 import me.ceyal.srh.data.Attributs._
 import me.ceyal.srh.data.components._
-import me.ceyal.srh.data.gear.Weapons.MeleeWeapons
+import me.ceyal.srh.data.{Astral => DimAstral}
+import me.ceyal.srh.data.gear.Weapons.{DamageType, MeleeWeapons, Physical, Stunning}
 import me.ceyal.srh.data.gear.{Commlink, InventoryItem}
 import me.ceyal.srh.data.skills.Competences.{Competence, _}
 import me.ceyal.srh.data.skills.InfluenceSpecs
 import me.ceyal.srh.data.spells.{Chamanism, CombatSpells, HealingSpells}
-import me.ceyal.srh.data.{Astral => DimAstral}
 
 package object entities {
   case class GameEntity(attributes: AttrBlock, components: List[Component] = List()) extends AttrGetter {
@@ -19,19 +19,23 @@ package object entities {
 
     def withComponents(components: Component*): GameEntity = copy(components = this.components ++ components)
 
-    def components[T <: Component](implicit clazz: Class[T]): Seq[T] = components.filter(_.tags(clazz)).filter(_.isInstanceOf[T]).map(_.asInstanceOf[T])
+    def components[T <: Component](implicit clazz: ComponentTag[T]): Seq[T] = components.filter(_.tags(clazz)).map(_.asInstanceOf[T])
 
-    def component[T <: Component](implicit clazz: Class[T]): T = components(clazz).head
+    def component[T <: Component](implicit clazz: ComponentTag[T]): T = components(clazz).head
 
-    def componentOpt[T <: Component](implicit clazz: Class[T]): Option[T] = components(clazz).headOption
+    def componentOpt[T <: Component](implicit clazz: ComponentTag[T]): Option[T] = components(clazz).headOption
 
-    def setComponent[T <: Component](newV: T)(implicit clazz: Class[T]) = ???
+    def setComponent[T <: Component](newV: T)(implicit clazz: ComponentTag[T]): GameEntity = copy(components =
+      newV :: components.filterNot(_.tags(clazz))
+    )
 
-    def setComponents[T <: Component](newV: Seq[T])(implicit clazz: Class[T]) = ???
+    def setComponents[T <: Component](newV: Seq[T])(implicit clazz: ComponentTag[T]): GameEntity = copy(components =
+      components.filterNot(_.tags(clazz)).appendedAll(newV)
+    )
 
-    def map[T <: Component](mapping: T => T)(implicit clazz: Class[T]) = ???
-
-    def mapComponent[T <: Component](newV: T)(implicit clazz: Class[T]) = ???
+    def mapAll[T <: Component](mapping: T => T)(implicit clazz: ComponentTag[T]): GameEntity = copy(components =
+      components.map(c => if (c.tags(clazz)) mapping(c.asInstanceOf[T]) else c)
+    )
 
     /* Scores */
 
@@ -53,7 +57,7 @@ package object entities {
                 attributes: AttrBlock,
                 skillsList: List[SkillLevel],
                 inventory: List[InventoryItem] = List(),
-                initiativeDices: Map[Dimension, Int] = Map()
+                initiativeDices: Int = 1
                ): GameEntity = {
     val skills: Map[Competence, SkillLevel] = skillsList.map(a => a.skill -> a).toMap
     val dmgMonitor = Math.ceil(attributes(Constitution) / 2).toInt + 8
@@ -63,8 +67,8 @@ package object entities {
       HasEnemyLevel(profLevel),
       HasSkills(skills),
       HasInventory(inventory),
-      HasDamageMonitor(dmgMonitor, dmgMonitor),
-      HasInitiative(initiativeDices)
+      HasDamageMonitor(dmgMonitor),
+      HasInitiative(Overworld, initiativeDices)
     ))
   }
 
@@ -80,9 +84,12 @@ package object entities {
         Constitution -> 1, Agilité -> 2, Réaction -> 3, Force -> 2, Volonté -> 3, Logique -> 2, Intuition -> 2, Charisme -> 2, Magie -> 2, Essence -> 6000
       ), List(
         SkillLevel(Astral, 2), SkillLevel(Conjuration, 2), SkillLevel(Sorcellerie, 2)
-      ), List(Commlink(1)), Map(DimAstral -> 2)).withComponents(HasMagic(Chamanism, List(
-        HealingSpells.Antidote, HealingSpells.SoinsPurificateurs, CombatSpells.FlotAcide, CombatSpells.Deflagration
-      )))
+      )).withComponents(
+        HasMagic(Chamanism, List(
+          HealingSpells.Antidote, HealingSpells.SoinsPurificateurs, CombatSpells.FlotAcide, CombatSpells.Deflagration
+        )),
+        HasInitiative(DimAstral, 2)
+      )
     )
 
     val EnemiesByProLevel: Map[Int, Seq[GameEntity]] = Enemies.groupBy(_.component[HasEnemyLevel].profLevel)

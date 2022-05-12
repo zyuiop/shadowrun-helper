@@ -6,6 +6,8 @@ import com.googlecode.lanterna.gui2.dialogs.DialogWindow
 import com.googlecode.lanterna.input.KeyStroke
 import me.ceyal.srh.Main
 import me.ceyal.srh.data.entities.BaseEnemies.Enemies
+import me.ceyal.srh.data.entities.GameEntity
+import me.ceyal.srh.ui.reactive.ReactiveValue
 
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.jdk.CollectionConverters.SeqHasAsJava
@@ -22,7 +24,7 @@ class MainWindow(gui: WindowBasedTextGUI) extends BasicWindow {
       } else if (key.getCharacter == 't') {
         // for "test"
         // gui.addWindowAndWait(new EntityWindow(Enemies.head))
-        gui.addWindowAndWait(new EntityListWindow(Enemies))
+        gui.addWindowAndWait(new EntityListWindow(Enemies.map(ReactiveValue.of[GameEntity])))
       }
     }
   })

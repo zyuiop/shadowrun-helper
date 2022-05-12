@@ -13,9 +13,9 @@ import me.ceyal.srh.data.skills.{AthletismeSpecs, CloseCombatWeaponKind, Compete
 object Weapons {
   trait WeaponKind
 
-  sealed trait DamageType
-  case object Physical extends DamageType
-  case object Stunning extends DamageType
+  sealed class DamageType(override val toString: String)
+  case object Physical extends DamageType("Physiques")
+  case object Stunning extends DamageType("Étourdissants")
 
   sealed trait Effect {
     // TODO: for electrocution and stuff

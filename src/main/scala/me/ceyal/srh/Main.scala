@@ -1,16 +1,11 @@
 package me.ceyal.srh
 
-import com.googlecode.lanterna.{TerminalPosition, TerminalSize}
+import com.googlecode.lanterna.TerminalSize
 import com.googlecode.lanterna.gui2._
-import com.googlecode.lanterna.gui2.dialogs.{ActionListDialogBuilder, MessageDialog, MessageDialogBuilder}
-import com.googlecode.lanterna.gui2.table.{Table, TableModel}
-import com.googlecode.lanterna.input.KeyStroke
 import com.googlecode.lanterna.screen.TerminalScreen
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory
-import me.ceyal.srh.ui.{DiceRollTable, MainWindow}
+import me.ceyal.srh.ui.MainWindow
 
-import java.util
-import java.util.concurrent.atomic.AtomicBoolean
 import scala.languageFeature.implicitConversions
 import scala.util.Try
 

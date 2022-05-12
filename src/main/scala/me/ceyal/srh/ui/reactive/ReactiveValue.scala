@@ -1,46 +1,56 @@
 package me.ceyal.srh.ui.reactive
 
-import com.googlecode.lanterna.gui2.{Component, Panel}
+import com.googlecode.lanterna.gui2.Component
 import me.ceyal.srh.ui.reactive.ReactiveValue.ChangeListener
+
+import scala.collection.mutable
 
 object ReactiveValue {
   trait ChangeListener[T] {
     def onChange(value: T, previous: T)
   }
+
+  def of[T](t: T): ReactiveValue[T] = new ReactiveValueImpl[T](t)
 }
 
-class ReactiveValue[T](initial: T) {
-  private var underlying: T = initial
-  private var listeners: List[ChangeListener[T]] = List()
+trait ReactiveValue[T] {
+  def get: T
 
-  def get: T = underlying
+  def set(other: T): ReactiveValue[T]
 
-  def set(other: T) = {
-    val previous = underlying
-    underlying = other
-    listeners.foreach(_.onChange(other, previous))
-  }
+  def update(mapping: T => T): ReactiveValue[T] = set(mapping(get))
 
-  def addListener(listener: ChangeListener[T]): ReactiveValue[T] = {
-    listeners = listener :: listeners
-    listener.onChange(get, get)
-    this
-  }
+  def addListener(listener: ChangeListener[T]): ReactiveValue[T]
 
-  def removeListener(listener: ChangeListener[T]): ReactiveValue[T] = {
-    listeners = listeners.filterNot(_ == listener)
-    this
-  }
+  def removeListener(listener: ChangeListener[T]): ReactiveValue[T]
 
-  def use(body: T => Component) = {
-    val panel = new Panel()
-    panel.addComponent(body(underlying))
-    addListener((value, _) => {
-      panel.removeAllComponents()
-      panel.addComponent(body(value))
-    })
+  def map[U](mapping: T => U, updater: (T, U) => T = (a: T, _: U) => a): ReactiveValue[U] = {
+    val parent = this
+    new ReactiveValue[U] {
+      private val listeners = mutable.Map[ChangeListener[U], ChangeListener[T]]()
 
-    panel
+      override def get: U = mapping(parent.get)
+
+      override def set(other: U): ReactiveValue[U] = {
+        parent.update((t: T) => updater(t, other))
+        this
+      }
+
+      override def addListener(listener: ChangeListener[U]): ReactiveValue[U] = {
+        val tListener = listeners.getOrElseUpdate(listener, (nv, pv) => {
+          val (nu, pu) = (mapping(nv), mapping(pv))
+
+          if (nu != pu) listener.onChange(nu, pu)
+        })
+        parent.addListener(tListener)
+        this
+      }
+
+      override def removeListener(listener: ChangeListener[U]): ReactiveValue[U] = {
+        listeners.remove(listener).foreach(parent.removeListener)
+        this
+      }
+    }
   }
 
   def ==>[U <: Component](map: T => U) = new ReactiveComponent[T, U](this, map)

@@ -1,15 +1,27 @@
 package me.ceyal.srh.data
 
 import me.ceyal.srh.data.Attributs.{Attribut, Charisme, Logique, Magie, Volonté}
+import me.ceyal.srh.data.components.HasDamageMonitor.forDamageType
+import me.ceyal.srh.data.components.HasInitiative.forDimension
+import me.ceyal.srh.data.entities.GameEntity
 import me.ceyal.srh.data.gear.InventoryItem
-import me.ceyal.srh.data.gear.Weapons.DamageType
+import me.ceyal.srh.data.gear.Weapons.{DamageType, Physical, Stunning}
 import me.ceyal.srh.data.skills.Competences.{Competence, Sorcellerie}
 import me.ceyal.srh.data.skills.{SorcellerieSpecs, Specialization}
 import me.ceyal.srh.data.spells.{Chamanism, Hermetism, MagicTradition, Spell}
 
+import scala.languageFeature.implicitConversions
+
 package object components {
+  sealed trait ComponentTag[_ <: Component]
+  case class ClassComponentTag[T <: Component](clazz: Class[_ <: T]) extends ComponentTag[T]
+  case class MixedComponentTag[T <: Component, U](clazz: Class[_ <: T], other: U) extends ComponentTag[T]
+
+  implicit def componentTagFromClass[T <: Component](clazz: Class[T]): ComponentTag[T] = ClassComponentTag(clazz)
+
   sealed trait Component {
-    val tags: Set[Class[_ <: Component]] = Set(getClass)
+    val baseTag: ComponentTag[_ <: Component] = ClassComponentTag(getClass)
+    val tags: Set[ComponentTag[_ <: Component]] = Set(baseTag)
   }
 
   trait AttributeModifier extends Component {
@@ -19,10 +31,10 @@ package object components {
   case class HasInventory(inventory: List[InventoryItem]) extends Component with AttributeModifier {
     def attributeModifier(attr: Attribut): Int = inventory.map(_.attrModifiers.getOrElse(attr, 0)).sum
 
-    override val tags: Set[Class[_ <: Component]] = Set(getClass, classOf[AttributeModifier])
+    override val tags: Set[ComponentTag[_ <: Component]] = Set(getClass, classOf[AttributeModifier])
   }
 
-  implicit val hasInventoryClazz: Class[HasInventory] = classOf[HasInventory]
+  implicit val hasInventoryClazz: ComponentTag[HasInventory] = classOf[HasInventory]
 
   case class HasSkills(skills: Map[Competence, SkillLevel]) extends Component {
     def dicesWithSkill(dices: AttrGetter)(attr: Attribut, skill: Competence, spe: Option[Specialization] = None): Int = {
@@ -36,30 +48,58 @@ package object components {
     def dicesForSkill(dices: AttrGetter)(skill: Competence, spe: Option[Specialization] = None): Int = dicesWithSkill(dices)(skill.mainStat, skill, spe)
   }
 
-  implicit val hasSkillsClazz: Class[HasSkills] = classOf[HasSkills]
+  implicit val hasSkillsClazz: ComponentTag[HasSkills] = classOf[HasSkills]
 
-  case class HasInitiative(dices: Map[Dimension, Int]) extends Component {
-    def initiative(attr: AttrGetter)(dimension: Dimension): Int = {
+  case class HasInitiative(dimension: Dimension, initiativeDices: Int, rolledValue: Option[Int] = None) extends Component {
+    def initiative(attr: AttrGetter): Int = {
       // TODO - dimension matters here
       attr(Attributs.Réaction) + attr(Attributs.Intuition)
     }
 
-    def initiativeDices(dimension: Dimension): Int = dices.get(dimension).orElse(dices.get(Overworld)).getOrElse(1)
+    def withRolledInitiative(rolledValue: Option[Int]): HasInitiative = copy(rolledValue = rolledValue)
+
+    override val tags: Set[ComponentTag[_ <: Component]] = Set(getClass, forDimension(dimension))
   }
 
-  implicit val hasInitiativeClazz: Class[HasInitiative] = classOf[HasInitiative]
+  object HasInitiative {
+    def forDimension(dimension: Dimension): ComponentTag[HasInitiative] = MixedComponentTag(classOf[HasInitiative], dimension)
+  }
+
+  implicit val hasInitiativeClazz: ComponentTag[HasInitiative] = classOf[HasInitiative]
 
   case class HasEnemyLevel(profLevel: Int) extends Component
 
-  implicit val hasEnemyLevelClazz: Class[HasEnemyLevel] = classOf[HasEnemyLevel]
+  implicit val hasEnemyLevelClazz: ComponentTag[HasEnemyLevel] = classOf[HasEnemyLevel]
 
   case class HasName(name: String) extends Component
 
-  implicit val hasNameClazz: Class[HasName] = classOf[HasName]
+  implicit val hasNameClazz: ComponentTag[HasName] = classOf[HasName]
 
-  case class HasDamageMonitor(maxValue: Int, currentValue: Int, damageType: Option[DamageType] = None) extends Component
+  case class HasDamageMonitor(maxValue: Int, currentValue: Int = 0, damageType: Option[DamageType] = None) extends Component {
+    def suffer(dmg: Int) = copy(currentValue = Math.min(maxValue, currentValue + dmg))
 
-  implicit val hasDamageMonitorClazz: Class[HasDamageMonitor] = classOf[HasDamageMonitor]
+    def heal(dmg: Int) = copy(currentValue = Math.max(0, currentValue - dmg))
+
+    override val tags: Set[ComponentTag[_ <: Component]] = Set(baseTag) ++ (damageType match {
+      case Some(tpe) => Set(forDamageType(tpe))
+      case None => Set(forDamageType(Stunning), forDamageType(Physical))
+    })
+  }
+
+  implicit class EntityWithDamageMonitor(entity: GameEntity) {
+    def damage(amt: Int, kind: DamageType): GameEntity = {
+      entity.mapAll[HasDamageMonitor](dmg => dmg.suffer(amt))(HasDamageMonitor.forDamageType(kind))
+    }
+    def heal(amt: Int, kind: DamageType): GameEntity = {
+      entity.mapAll[HasDamageMonitor](dmg => dmg.heal(amt))(HasDamageMonitor.forDamageType(kind))
+    }
+  }
+
+  object HasDamageMonitor {
+    def forDamageType(damageType: DamageType): ComponentTag[HasDamageMonitor] = MixedComponentTag(classOf[HasDamageMonitor], damageType)
+  }
+
+  implicit val hasDamageMonitorClazz: ComponentTag[HasDamageMonitor] = classOf[HasDamageMonitor]
 
   case class HasMagic(tradition: MagicTradition, spells: Seq[Spell]) extends Component {
     val traditionAttribute: Attribut = tradition match {
@@ -80,5 +120,5 @@ package object components {
     def castReserve(attr: AttrGetter, e: HasSkills): Int = e.dicesForSkill(attr)(Sorcellerie, Some(SorcellerieSpecs.LancementSorts))
   }
 
-  implicit val hasMagicClazz: Class[HasMagic] = classOf[HasMagic]
+  implicit val hasMagicClazz: ComponentTag[HasMagic] = classOf[HasMagic]
 }

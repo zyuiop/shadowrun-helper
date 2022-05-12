@@ -3,16 +3,18 @@ package me.ceyal.srh.ui
 import com.googlecode.lanterna.SGR
 import com.googlecode.lanterna.gui2.Interactable.Result
 import com.googlecode.lanterna.gui2.Window.Hint
-import com.googlecode.lanterna.gui2.table.Table
 import com.googlecode.lanterna.gui2._
-import com.googlecode.lanterna.gui2.dialogs.MessageDialogBuilder
+import com.googlecode.lanterna.gui2.dialogs.{ListSelectDialogBuilder, MessageDialogBuilder, MessageDialogButton}
+import com.googlecode.lanterna.gui2.table.Table
 import com.googlecode.lanterna.input.{KeyStroke, KeyType}
 import me.ceyal.srh.Main
-import me.ceyal.srh.data.components.{HasMagic, HasSkills}
+import me.ceyal.srh.data.components.{EntityWithDamageMonitor, HasDamageMonitor, HasMagic, HasSkills}
 import me.ceyal.srh.data.entities.GameEntity
+import me.ceyal.srh.data.gear.Weapons.{Physical, Stunning}
 import me.ceyal.srh.data.spells.Spell
 import me.ceyal.srh.data.{AttrBlock, Attributs, SkillLevel}
 import me.ceyal.srh.ui.EntityWindow.entityPanel
+import me.ceyal.srh.ui.reactive.ReactiveValue
 import me.ceyal.srh.util.{NamedGameEntity, foldText}
 
 import java.util.concurrent.atomic.AtomicBoolean
@@ -66,19 +68,29 @@ object EntityWindow {
   }
 
 
-  def magicTable(entity: GameEntity, magic: HasMagic) = {
+  def magicTable(reactiveEntity: ReactiveValue[GameEntity], magic: HasMagic) = {
     new TableWithDetails[Spell](magic.spells, Seq("Nom", "Type", "Portée", "Durée", "Drain")) {
       // override def onSelect(selected: SkillLevel): Unit = launchDices(selected)
 
       def drainDamage(spell: Spell) = {
-        val dices = magic.drainReserve(entity)
+        val dices = magic.drainReserve(reactiveEntity.get)
         val successes = DiceRollTable.dialog(Main.gui, dices).count(_ > 4)
         val reducedDrain = Math.max(0, spell.drain - successes)
 
-        val dmgType = if (reducedDrain > entity.attr(Attributs.Magie)) "physiques" else "étourdissants"
+        val dmgType = if (reducedDrain > reactiveEntity.get.attr(Attributs.Magie)) Physical else Stunning
 
+        val applDmg = "Encaisser les dégats"
         // TODO: directly apply damages?
-        new MessageDialogBuilder().setTitle("Drain").setText(s"Drain [${spell.drain}] - Dés [$successes] = $reducedDrain dégats $dmgType").build().showDialog(Main.gui)
+        val result = new ListSelectDialogBuilder[String].setTitle("Drain")
+          .setDescription(s"Drain [${spell.drain}] - Dés [$successes] = $reducedDrain dégats $dmgType")
+          .addListItem(applDmg)
+          .addListItem("Fermer")
+          .build()
+          .showDialog(Main.gui)
+
+        if (result == applDmg && reducedDrain > 0) {
+          reactiveEntity.update(_.damage(reducedDrain, dmgType))
+        }
       }
 
       override def keyHandler(key: KeyStroke, selected: Spell): Result = {
@@ -90,6 +102,8 @@ object EntityWindow {
           Result.HANDLED
         } else Result.UNHANDLED
       }
+
+      override def onSelect(selected: Spell): Unit = drainDamage(selected)
 
       override def createRow(spell: Spell): Seq[String] =
         Seq(spell.name, spell.spellType.toString, spell.range.toString, spell.duration.toString, spell.drain.toString)
@@ -105,8 +119,19 @@ object EntityWindow {
     }
   }
 
-  def entityPanel(entity: GameEntity, withFrame: Boolean = false): Container = {
+  def damageGauges(dmg: ReactiveValue[Seq[HasDamageMonitor]]): Container = dmg ==> { dmgSeq =>
+    def damageGauge(mon: HasDamageMonitor) = Seq(
+      new Label(mon.damageType.map(_.toString).getOrElse("Tous")),
+      new Label(s"[${mon.currentValue} / ${mon.maxValue}]"),
+      new ProgressBar(0, mon.maxValue, 20).setValue(mon.currentValue)
+    )
+
+    Panels.grid(3, dmgSeq.flatMap(damageGauge): _*)
+  }
+
+  def entityPanel(reactiveEntity: ReactiveValue[GameEntity], withFrame: Boolean = false): Container = {
     val shortcuts = mutable.Map[Char, Container]()
+    val entity = reactiveEntity.get // todo
 
     def withShortcut(char: Char, container: Container) = {
       shortcuts.put(char, container)
@@ -115,7 +140,7 @@ object EntityWindow {
 
     val panel = new Panel(new LinearLayout(Direction.VERTICAL).setSpacing(1)) {
       override def handleInput(key: KeyStroke): Boolean = {
-        if (!super.handleInput(key)) {
+        if (!super.handleInput(key) && key.getCharacter != null) {
           if (shortcuts.contains(key.getCharacter.charValue())) {
             val focus = shortcuts(key.getCharacter.charValue()).nextFocus(null)
 
@@ -123,7 +148,16 @@ object EntityWindow {
               focus.takeFocus()
               true
             } else false
-          } else false
+          }
+          else if (key.getCharacter == 'd') {
+            reactiveEntity.update(_.damage(1, if (key.isAltDown) Stunning else Physical))
+            true
+          }
+          else if (key.getCharacter == 'h') {
+            reactiveEntity.update(_.heal(1, if (key.isAltDown) Stunning else Physical))
+            true
+          }
+          else false
         } else true
       }
     }
@@ -132,27 +166,33 @@ object EntityWindow {
       .setLayoutData(LinearLayout.createLayoutData(LinearLayout.Alignment.Center))
 
     entity.components[HasSkills].foreach(skillComponent => {
-      panel addComponent withShortcut('c',  skillsTable(entity, skillComponent).withBorder(Borders.singleLine("Compétences")))
+      panel addComponent withShortcut('c', skillsTable(entity, skillComponent).withBorder(Borders.singleLine("Compétences")))
         .setLayoutData(LinearLayout.createLayoutData(LinearLayout.Alignment.Center))
     })
 
     entity.components[HasMagic].foreach(magicComponent => {
-      panel addComponent withShortcut('m', magicTable(entity, magicComponent).withBorder(Borders.singleLine(s"Magie (${magicComponent.tradition})")))
+      panel addComponent withShortcut('m', magicTable(reactiveEntity, magicComponent).withBorder(Borders.singleLine(s"Magie (${magicComponent.tradition})")))
         .setLayoutData(LinearLayout.createLayoutData(LinearLayout.Alignment.Center))
     })
+
+    if (entity.components[HasDamageMonitor].nonEmpty) {
+      val reactiveDmg = reactiveEntity.map[Seq[HasDamageMonitor]](_.components[HasDamageMonitor], (entity, dmgMonitors) => entity.setComponents(dmgMonitors))
+      panel.addComponent(damageGauges(reactiveDmg).withBorder(Borders.singleLine("Moniteurs d'état")), LinearLayout.createLayoutData(LinearLayout.Alignment.Center)
+      )
+    }
 
     if (withFrame) panel.withBorder(Borders.singleLine(entity.name))
     else panel
   }
 }
 
-class EntityWindow(entity: GameEntity) extends BasicWindow {
+class EntityWindow(reactiveEntity: ReactiveValue[GameEntity]) extends BasicWindow {
   setHints(List(Hint.CENTERED).asJava)
 
   // Determine the title
-  setTitle(entity.name)
+  setTitle(reactiveEntity.get.name)
 
-  setComponent(entityPanel(entity))
+  setComponent(entityPanel(reactiveEntity))
 
   addWindowListener(new WindowListenerAdapter {
     override def onUnhandledInput(basePane: Window, key: KeyStroke, hasBeenHandled: AtomicBoolean): Unit = {
