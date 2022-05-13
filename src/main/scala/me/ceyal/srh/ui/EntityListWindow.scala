@@ -1,13 +1,14 @@
 package me.ceyal.srh.ui
 
 import com.googlecode.lanterna.gui2.Window.Hint
-import com.googlecode.lanterna.gui2.{BasicWindow, Direction, Interactable, Panels, Window, WindowListenerAdapter}
+import com.googlecode.lanterna.gui2.{BasicWindow, BorderLayout, Direction, GridLayout, Interactable, LinearLayout, Panels, Window, WindowListenerAdapter}
 import com.googlecode.lanterna.input.{KeyStroke, KeyType}
 import me.ceyal.srh.Main
 import me.ceyal.srh.data.components.{EntityWithDamageMonitor, HasEnemyLevel, HasName}
 import me.ceyal.srh.data.entities.GameEntity
 import me.ceyal.srh.data.gear.Weapons.{Physical, Stunning}
 import me.ceyal.srh.ui.EntityWindow.entityPanel
+import me.ceyal.srh.ui.components.TableWithDetails
 import me.ceyal.srh.ui.reactive.ReactiveValue
 import me.ceyal.srh.util.NamedGameEntity
 
@@ -15,8 +16,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.jdk.CollectionConverters.SeqHasAsJava
 
 
-class EntityListWindow(entities: Seq[ReactiveValue[GameEntity]]) extends BasicWindow {
+class EntityListWindow(entities: Seq[ReactiveValue[GameEntity]], title: Option[String] = None) extends BasicWindow {
   setHints(List(Hint.CENTERED).asJava)
+
+  title.foreach(setTitle)
 
   val tbl = new TableWithDetails(
     rows = entities,
@@ -40,7 +43,11 @@ class EntityListWindow(entities: Seq[ReactiveValue[GameEntity]]) extends BasicWi
     }
   }
 
-  setComponent(Panels.vertical(tbl))
+  setComponent(
+    Panels.grid(1,
+      tbl.setLayoutData(GridLayout.createLayoutData(GridLayout.Alignment.CENTER, GridLayout.Alignment.CENTER))
+    )
+  )
 
   addWindowListener(new WindowListenerAdapter {
     override def onUnhandledInput(basePane: Window, key: KeyStroke, hasBeenHandled: AtomicBoolean): Unit = {

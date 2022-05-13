@@ -1,12 +1,10 @@
-package me.ceyal.srh.ui
+package me.ceyal.srh.ui.components
 
-import com.googlecode.lanterna.graphics.{DelegatingThemeDefinition, Theme, ThemeDefinition, ThemeStyle}
-import com.googlecode.lanterna.{SGR, TextColor}
+import com.googlecode.lanterna.TextColor
 import com.googlecode.lanterna.gui2._
 import com.googlecode.lanterna.gui2.table.{DefaultTableCellRenderer, Table}
 import com.googlecode.lanterna.input.KeyStroke
 
-import java.util
 import scala.jdk.CollectionConverters.SeqHasAsJava
 
 class TableWithDetails[T](rows: Seq[T], headers: Seq[String], rowMapperLambda: T => Seq[String] = (_: T) => ???, detailsMapperLambda: T => Container = (_: T) => ???,

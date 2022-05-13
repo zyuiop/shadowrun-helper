@@ -14,6 +14,7 @@ import me.ceyal.srh.data.gear.Weapons.{Physical, Stunning}
 import me.ceyal.srh.data.spells.Spell
 import me.ceyal.srh.data.{AttrBlock, Attributs, SkillLevel}
 import me.ceyal.srh.ui.EntityWindow.entityPanel
+import me.ceyal.srh.ui.components.TableWithDetails
 import me.ceyal.srh.ui.reactive.ReactiveValue
 import me.ceyal.srh.util.{NamedGameEntity, foldText}
 
