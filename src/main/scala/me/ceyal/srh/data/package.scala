@@ -4,24 +4,31 @@ import me.ceyal.srh.data.Attributs.{Attribut, Value, valueToAttribut}
 import me.ceyal.srh.data.gear.InventoryItem
 import me.ceyal.srh.data.gear.Weapons.DamageType
 import me.ceyal.srh.data.skills.Competences.Competence
-import me.ceyal.srh.data.skills.{Specialization, SpecializationsSet}
+import me.ceyal.srh.data.skills.{Specialization, SpecializationsSet, competenceFormat}
 import play.api.libs.json.{DefaultReads, DefaultWrites, Format, JsString, Json, KeyReads, KeyWrites, Reads, Writes}
 
 package object data {
   object Dimensions extends Enumeration {
     type Dimension = Value
 
-    val Overworld, Astral, Matrix, VRCold, VRHot = Value
+    val Overworld = Value("Monde Réel")
+    val Astral = Value("Dimension Astrale")
+    val Matrix = Value("Matrice")
+    val VRCold = Value("Réalité Virtuelle (froide)")
+    val VRHot = Value("Réalité Virtuelle (chaude)")
   }
 
   import Dimensions._
 
   implicit val dimensionFormat: Format[Dimension] = Json.formatEnum(Dimensions)
+  implicit val dimensionKeyReads: KeyReads[Dimension] = KeyReads(a => dimensionFormat.reads(JsString(a)))
+  implicit val dimensionKeyWrites: KeyWrites[Dimension] = KeyWrites(a => dimensionFormat.writes(a).validate[String].get)
 
   object Attributs extends Enumeration {
     case class Attribut(abbr: String) extends super.Val
 
     import scala.language.implicitConversions
+
     implicit def valueToAttribut(x: Value): Attribut = x.asInstanceOf[Attribut]
 
     val Constitution: Attribut = Attribut("CON")

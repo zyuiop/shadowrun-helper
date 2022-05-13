@@ -2,7 +2,7 @@ package me.ceyal.srh.data
 
 import me.ceyal.srh.data.Attributs._
 import me.ceyal.srh.data.components._
-import me.ceyal.srh.data.Dimensions.{Overworld, Astral => DimAstral}
+import me.ceyal.srh.data.Dimensions.{Dimension, Overworld, Astral => DimAstral}
 import me.ceyal.srh.data.gear.Weapons.{DamageType, MeleeWeapons, Physical, Stunning}
 import me.ceyal.srh.data.gear.InventoryItem
 import me.ceyal.srh.data.gear.MiscItems.Commlink
@@ -64,7 +64,7 @@ package object entities {
                 attributes: AttrBlock,
                 skillsList: List[SkillLevel],
                 inventory: List[InventoryItem] = List(),
-                initiativeDices: Int = 1
+                initiativeDices: Map[Dimension, Int] = Map()
                ): GameEntity = {
     val skills: Map[Competence, SkillLevel] = skillsList.map(a => a.skill -> a).toMap
     val dmgMonitor = Math.ceil(attributes(Constitution) / 2).toInt + 8
@@ -75,7 +75,7 @@ package object entities {
       HasSkills(skills),
       HasInventory(inventory),
       HasDamageMonitor(dmgMonitor),
-      HasInitiative(Overworld, initiativeDices)
+      HasInitiative(initiativeDices)
     ))
   }
 
@@ -91,11 +91,10 @@ package object entities {
         Constitution -> 1, Agilité -> 2, Réaction -> 3, Force -> 2, Volonté -> 3, Logique -> 2, Intuition -> 2, Charisme -> 2, Magie -> 2, Essence -> 6000
       ), List(
         SkillLevel(Astral, 2), SkillLevel(Conjuration, 2), SkillLevel(Sorcellerie, 2)
-      )).withComponents(
+      ), initiativeDices = Map(DimAstral -> 2)).withComponents(
         HasMagic(Chamanism, List(
           HealingSpells.Antidote, HealingSpells.SoinsPurificateurs, CombatSpells.FlotAcide, CombatSpells.Deflagration
         )),
-        HasInitiative(DimAstral, 2)
       )
     )
 

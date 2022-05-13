@@ -3,7 +3,6 @@ package me.ceyal.srh.data
 import me.ceyal.srh.data.Attributs.{Attribut, Charisme, Logique, Magie, Volonté}
 import me.ceyal.srh.data.Dimensions.Dimension
 import me.ceyal.srh.data.components.HasDamageMonitor.forDamageType
-import me.ceyal.srh.data.components.HasInitiative.forDimension
 import me.ceyal.srh.data.entities.GameEntity
 import me.ceyal.srh.data.gear.InventoryItem
 import me.ceyal.srh.data.gear.Weapons.{DamageType, Physical, Stunning}
@@ -61,19 +60,15 @@ package object components {
   implicit val hasSkillsFormat: Format[HasSkills] = format[HasSkills]
 
 
-  case class HasInitiative(dimension: Dimension, initiativeDices: Int, rolledValue: Option[Int] = None) extends Component {
+  case class HasInitiative(dices: Map[Dimension, Int], rolledValue: Option[Int] = None) extends Component {
     def initiative(attr: AttrGetter): Int = {
       // TODO - dimension matters here
       attr(Attributs.Réaction) + attr(Attributs.Intuition)
     }
 
+    def getDices(dim: Dimension): Int = dices.getOrElse(dim, 1)
+
     def withRolledInitiative(rolledValue: Option[Int]): HasInitiative = copy(rolledValue = rolledValue)
-
-    override val tags: Set[ComponentTag[_ <: Component]] = Set(getClass, forDimension(dimension))
-  }
-
-  object HasInitiative {
-    def forDimension(dimension: Dimension): ComponentTag[HasInitiative] = MixedComponentTag(classOf[HasInitiative], dimension)
   }
 
   implicit val hasInitiativeClazz: ComponentTag[HasInitiative] = classOf[HasInitiative]
