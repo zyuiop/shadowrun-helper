@@ -9,13 +9,22 @@ import me.ceyal.srh.data.skills.Competences.{Athletisme, CombatRapproche, Compet
 import me.ceyal.srh.data.skills.FirearmKinds._
 import me.ceyal.srh.data.skills.ExoticWeaponsKinds._
 import me.ceyal.srh.data.skills.{AthletismeSpecs, CloseCombatWeaponKind, Competences, ExoticWeaponsKinds, SpecializationsSet}
+import play.api.libs.json.{Format, Json}
 
 object Weapons {
   trait WeaponKind
 
-  sealed class DamageType(override val toString: String)
-  case object Physical extends DamageType("Physiques")
-  case object Stunning extends DamageType("Étourdissants")
+  object DamageTypes extends Enumeration {
+    type DamageType = Value
+
+    val Physical = Value("Physiques")
+    val Stunning = Value("Étourdissants")
+  }
+
+  type DamageType = DamageTypes.DamageType
+  val Physical = DamageTypes.Physical
+  val Stunning = DamageTypes.Stunning
+  implicit val damageTypeFormat: Format[DamageType] = Json.formatEnum(DamageTypes)
 
   sealed trait Effect {
     // TODO: for electrocution and stuff
@@ -88,8 +97,8 @@ object Weapons {
     val FouetMonofil = MeleeWeapon("Fouet monofilament", ExoticWeaponsKinds.FouetMonofilament, 4, 14, baseSkill = Competences.ArmesExotiques)
   }
 
-  object ThrowableWeapons {
-    case class ThrowableWeapon(name: String, spec: WeaponKind, dices: Int, atkScores: (Int, Int, Int, Int), damageType: DamageType = Physical, hitEffects: Set[Effect] = Set(), moreAtkScores: Map[Ranges.Range, Int] = Map(), baseSkill: Competence = Competences.CombatRapproche) extends Weapon {
+  object ThrowableWeapons extends Enumeration {
+    case class ThrowableWeapon(name: String, spec: WeaponKind, dices: Int, atkScores: (Int, Int, Int, Int), damageType: DamageType = Physical, hitEffects: Set[Effect] = Set(), moreAtkScores: Map[Ranges.Range, Int] = Map(), baseSkill: Competence = Competences.CombatRapproche) extends this.Val(name) with Weapon {
       override def atkScore(range: Ranges.Range, holderAttr: AttrGetter): Int = {
         if (range == Ranges.Proche) atkScores._1
         else if (range == Ranges.Courte) atkScores._2
@@ -103,12 +112,11 @@ object Weapons {
       override def damageDices(holderAttr: AttrGetter): Int = dices
     }
 
-    def bow(level: Int) = {
-      require(level > 0 && level < 15)
+    val bow: Map[Int, ThrowableWeapon] = (1 to 15).map(level => {
       def divUp(fact: Int) = Math.ceil(level / fact.toDouble).toInt
       val atkScore = (if (level < 7) 2 else if (level < 10) 3 else 4)
-      ThrowableWeapon(s"Arc (indice $level)", Archerie, atkScore, (divUp(2), divUp(3), divUp(4), 0))
-    }
+      level -> ThrowableWeapon(s"Arc (indice $level)", Archerie, atkScore, (divUp(2), divUp(3), divUp(4), 0))
+    }).toMap
 
     val ArbaleteLegere = ThrowableWeapon("Arbalète légère", Archerie, 2, (2, 6, 8, 0))
     val ArbaleteStandard = ThrowableWeapon("Arbalète standard", Archerie, 3, (2, 10, 4, 2))

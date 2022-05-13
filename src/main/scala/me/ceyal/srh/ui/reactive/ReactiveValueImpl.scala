@@ -9,6 +9,8 @@ class ReactiveValueImpl[T](initial: T) extends ReactiveValue[T] {
   def get: T = underlying
 
   def set(other: T): ReactiveValueImpl[T] = {
+    if (get == other) return this
+
     val previous = underlying
     underlying = other
     listeners.foreach(_.onChange(other, previous))

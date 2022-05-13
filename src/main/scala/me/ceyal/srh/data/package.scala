@@ -1,26 +1,28 @@
 package me.ceyal.srh
 
-import me.ceyal.srh.data.Attributs.Attribut
+import me.ceyal.srh.data.Attributs.{Attribut, Value, valueToAttribut}
 import me.ceyal.srh.data.gear.InventoryItem
 import me.ceyal.srh.data.gear.Weapons.DamageType
 import me.ceyal.srh.data.skills.Competences.Competence
 import me.ceyal.srh.data.skills.{Specialization, SpecializationsSet}
+import play.api.libs.json.{DefaultReads, DefaultWrites, Format, JsString, Json, KeyReads, KeyWrites, Reads, Writes}
 
 package object data {
-  type AttrBlock = Map[Attribut, Int]
-  type AttrGetter = Attribut => Int
+  object Dimensions extends Enumeration {
+    type Dimension = Value
 
+    val Overworld, Astral, Matrix, VRCold, VRHot = Value
+  }
 
+  import Dimensions._
 
-  sealed trait Dimension
-  case object Overworld extends Dimension
-  case object Astral extends Dimension
-  case object Matrix extends Dimension
-  case object VRCold extends Dimension
-  case object VRHot extends Dimension
+  implicit val dimensionFormat: Format[Dimension] = Json.formatEnum(Dimensions)
 
   object Attributs extends Enumeration {
     case class Attribut(abbr: String) extends super.Val
+
+    import scala.language.implicitConversions
+    implicit def valueToAttribut(x: Value): Attribut = x.asInstanceOf[Attribut]
 
     val Constitution: Attribut = Attribut("CON")
     val Agilité: Attribut = Attribut("AGI")
@@ -43,9 +45,15 @@ package object data {
     val DésInitiative: Attribut = Attribut("DI")
   }
 
+  implicit val attrsFormat: Format[Attributs.Value] = Json.formatEnum(Attributs)
+  implicit val attrFormat: Format[Attribut] = attrsFormat.bimap(valueToAttribut, identity)
+  implicit val keyReads: KeyReads[Attribut] = KeyReads(a => attrFormat.reads(JsString(a)))
+  implicit val keyWrites: KeyWrites[Attribut] = KeyWrites(a => attrFormat.writes(a).validate[String].get)
+
   case class SkillLevel(skill: skills.Competences.Competence, level: Int, specialization: Option[Specialization] = None, mastery: Option[Specialization] = None)
 
+  implicit val skillLevelFormat: Format[SkillLevel] = Json.format[SkillLevel]
 
-
-
+  type AttrBlock = Map[Attribut, Int]
+  type AttrGetter = Attribut => Int
 }

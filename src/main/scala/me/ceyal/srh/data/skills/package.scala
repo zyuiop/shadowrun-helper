@@ -2,12 +2,37 @@ package me.ceyal.srh.data
 
 import me.ceyal.srh.data.Attributs.Attribut
 import me.ceyal.srh.data.gear.Weapons.WeaponKind
+import me.ceyal.srh.data.skills.Competences.{Competence, valueToCompetence}
 import me.ceyal.srh.data.skills.IngenierieSpecs.IngenierieSpec
 import me.ceyal.srh.data.skills.PilotageSpecs.PilotageSpec
+import me.ceyal.srh.util.{EnumValueBase, enumOfEnumFormat}
+import play.api.libs.json._
+
+import scala.util.Try
 
 package object skills {
-  trait SpecializationsSet
-  trait Specialization
+  sealed trait SpecializationsSet {
+    def withName(str: String): Any
+    def apply(i: Int): Any
+  }
+
+  sealed trait Specialization extends EnumValueBase
+
+  implicit val specializationSetFormat: Format[SpecializationsSet] = new Format[SpecializationsSet] {
+    override def reads(json: JsValue): JsResult[SpecializationsSet] = json match {
+      case JsString(s) =>
+        val ss = Class.forName(s).getField("MODULE$").get(null).asInstanceOf[SpecializationsSet]
+        JsSuccess(ss)
+      case _ => JsError("Object expected")
+    }
+
+    override def writes(o: SpecializationsSet): JsValue = {
+      val enumClass = o.getClass.getSimpleName
+      JsString(enumClass)
+    }
+  }
+
+  implicit val specializationFormat: Format[Specialization] = enumOfEnumFormat[Specialization]
 
   object Competences extends Enumeration {
     /**
@@ -20,6 +45,9 @@ package object skills {
     case class Competence(name: String, mainStat: Attribut, specialization: SpecializationsSet, inexperienced: Boolean = true, alternativeStat: Map[String, Attribut] = Map.empty) extends super.Val {
       def canUse(stats: AttrBlock) = true
     }
+
+    import scala.language.implicitConversions
+    implicit def valueToCompetence(x: Value): Competence = x.asInstanceOf[Competence]
 
     val ArmesAFeu = Competence("Armes à feu", Attributs.Agilité, FirearmKinds)
     val ArmesExotiques = Competence("Armes exotiques", Attributs.Agilité, ExoticWeaponsKinds, inexperienced = false) // TODO - integrate list of exotic weapons somehow
@@ -57,6 +85,11 @@ package object skills {
     val Sorcellerie = Competence("Sorcellerie", Attributs.Magie, SorcellerieSpecs, inexperienced = false)
     val Technomancie = Competence("Technomancie", Attributs.Résonance, TechnomancieSpecs, inexperienced = false)
   }
+
+  implicit val competencesFormat: Format[Competences.Value] = Json.formatEnum(Competences)
+  implicit val competenceFormat: Format[Competence] = competencesFormat.bimap(valueToCompetence, identity)
+  implicit val keyReads: KeyReads[Competence] = KeyReads(a => competenceFormat.reads(JsString(a)))
+  implicit val keyWrites: KeyWrites[Competence] = KeyWrites(a => competenceFormat.writes(a).validate[String].get)
 
   // Todo - move?
   object FirearmKinds extends Enumeration with SpecializationsSet {

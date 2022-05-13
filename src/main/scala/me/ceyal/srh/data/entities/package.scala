@@ -2,16 +2,19 @@ package me.ceyal.srh.data
 
 import me.ceyal.srh.data.Attributs._
 import me.ceyal.srh.data.components._
-import me.ceyal.srh.data.{Astral => DimAstral}
+import me.ceyal.srh.data.Dimensions.{Overworld, Astral => DimAstral}
 import me.ceyal.srh.data.gear.Weapons.{DamageType, MeleeWeapons, Physical, Stunning}
-import me.ceyal.srh.data.gear.{Commlink, InventoryItem}
+import me.ceyal.srh.data.gear.InventoryItem
+import me.ceyal.srh.data.gear.MiscItems.Commlink
 import me.ceyal.srh.data.skills.Competences.{Competence, _}
 import me.ceyal.srh.data.skills.InfluenceSpecs
-import me.ceyal.srh.data.spells.{Chamanism, CombatSpells, HealingSpells}
+import me.ceyal.srh.data.spells.MagicTraditions.Chamanism
+import me.ceyal.srh.data.spells.{CombatSpells, HealingSpells}
+import play.api.libs.json.{Format, Json}
 
 package object entities {
   case class GameEntity(attributes: AttrBlock, components: List[Component] = List()) extends AttrGetter {
-    private def modifiers: Seq[AttributeModifier] = components(classOf[AttributeModifier])
+    private def modifiers: Seq[AttributeModifier] = components(AttributeModifierTag)
 
     def attr(attr: Attribut): Int = attributes.getOrElse(attr, 0) + modifiers.map(_.attributeModifier(attr)).sum
 
@@ -42,7 +45,11 @@ package object entities {
     def defScore: Int = attr(Attributs.Constitution) //  + modifiers.map(_.armorIndex).max // TODO - armor index impl as an attr modifier?
 
     def baseAtkScore: Int = attr(Attributs.Réaction) + attr(Attributs.Force) // TODO: "peut être modifié par certains traits et équipements"
+
+    override def toString(): String = s"GameEntity (${componentOpt[HasName].map(_.name).getOrElse("Unnamed")}) {attributes=$attributes, compoentns=$components}"
   }
+
+  implicit val gameEntityFormat: Format[GameEntity] = Json.format[GameEntity]
 
   /*case class Character(name: String,
                        attributes: AttrBlock,

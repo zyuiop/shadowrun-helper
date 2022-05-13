@@ -3,11 +3,18 @@ package me.ceyal.srh.data
 import me.ceyal.srh.data.Attributs.Attribut
 import me.ceyal.srh.data.gear.Weapons.{Chemical, DamageType, Effect, Stunning}
 import me.ceyal.srh.data.gear.Weapons.{Physical => DmgPhysical}
+import me.ceyal.srh.data.spells.MagicTraditions.MagicTradition
+import me.ceyal.srh.util.{EnumValueBase, enumOfEnumFormat}
+import play.api.libs.json.{Format, Json, OFormat}
 
 package object spells {
-  sealed class MagicTradition(override val toString: String)
-  case object Chamanism extends MagicTradition("Chamanisme")
-  case object Hermetism extends MagicTradition("Hermétisme")
+  object MagicTraditions extends Enumeration {
+    type MagicTradition = Value
+    val Chamanism = Value("Chamanisme")
+    val Hermetism = Value("Hermétisme")
+  }
+
+  implicit val magicTraditionFormat: Format[MagicTradition] = Json.formatEnum(MagicTraditions)
 
   sealed class SpellType(override val toString: String)
   case object Physical extends SpellType("Physique")
@@ -28,7 +35,7 @@ package object spells {
   case object DirectCombat extends CombatType(Set(Attributs.Volonté, Attributs.Intuition), "Direct")
   case object IndirectCombat extends CombatType(Set(Attributs.Réaction, Attributs.Volonté), "Indirect")
 
-  sealed trait Spell {
+  sealed trait Spell extends EnumValueBase {
     val name: String
     val range: SpellRange
     val spellType: SpellType
@@ -37,6 +44,7 @@ package object spells {
     val description: String
   }
 
+  implicit val spellFormat = enumOfEnumFormat[Spell]
 
   object HealingSpells extends Enumeration {
     case class HealingSpell(name: String, range: SpellRange, spellType: SpellType, duration: SpellDuration, drain: Int, description: String) extends super.Val(name) with Spell

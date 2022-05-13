@@ -24,7 +24,7 @@ class MainWindow(gui: WindowBasedTextGUI) extends BasicWindow {
       } else if (key.getCharacter == 't') {
         // for "test"
         // gui.addWindowAndWait(new EntityWindow(Enemies.head))
-        gui.addWindowAndWait(new EntityListWindow(Enemies.map(ReactiveValue.of[GameEntity])))
+        gui.addWindowAndWait(new EntityListWindow(Enemies.map(ReactiveValue.of[GameEntity]) ++ Enemies.map(ReactiveValue.of[GameEntity])))
       }
     }
   })
