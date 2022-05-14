@@ -4,28 +4,18 @@ import com.googlecode.lanterna.TextColor
 import com.googlecode.lanterna.gui2._
 import com.googlecode.lanterna.gui2.table.{DefaultTableCellRenderer, Table}
 import com.googlecode.lanterna.input.KeyStroke
+import me.ceyal.srh.ui.reactive.ReactiveValue
 
 import scala.jdk.CollectionConverters.SeqHasAsJava
 
 class TableWithDetails[T](rows: Seq[T], headers: Seq[String], rowMapperLambda: T => Seq[String] = (_: T) => ???, detailsMapperLambda: T => Container = (_: T) => ???,
-                               detailsPosition: Direction = Direction.VERTICAL) extends Panel(new LinearLayout(detailsPosition).setSpacing(1)) {
+                               detailsPosition: Direction = Direction.VERTICAL,
+                          addDetailsPanel: Boolean = true
+                         ) extends Panel(new LinearLayout(detailsPosition)) {
 
-  private var detailsPanel: Option[Container] = None
   private var childFocused: Boolean = false
-
-  private def setDetailsPanel(e: T): Unit = synchronized {
-    clearDetailsPanel()
-    val pane = createDetailsBlock(e)
-    detailsPanel = Some(pane)
-    addComponent(pane)
-  }
-
-  private def clearDetailsPanel(): Unit = synchronized {
-    if (detailsPanel.nonEmpty) {
-      removeComponent(detailsPanel.get)
-      detailsPanel = None
-    }
-  }
+  val hovered: ReactiveValue[Option[T]] = ReactiveValue.of(None)
+  val detailsPanel = hovered ==> (o => o.map(createDetailsBlock).orNull)
 
   val table: Table[String] = new Table[String](headers: _*) {
     rows.foreach(r => getTableModel.addRow(createRow(r).asJava))
@@ -33,19 +23,18 @@ class TableWithDetails[T](rows: Seq[T], headers: Seq[String], rowMapperLambda: T
     override def afterEnterFocus(direction: Interactable.FocusChangeDirection, previouslyInFocus: Interactable): Unit = {
       super.afterEnterFocus(direction, previouslyInFocus)
       childFocused = false
-      setDetailsPanel(rows(getSelectedRow))
+      hovered.set(Some(rows(getSelectedRow)))
     }
 
     override def afterLeaveFocus(direction: Interactable.FocusChangeDirection, nextInFocus: Interactable): Unit = {
       super.afterLeaveFocus(direction, nextInFocus)
+
       childFocused = false
-      if (nextInFocus == null || !nextInFocus.hasParent(TableWithDetails.this)) clearDetailsPanel()
+      if (nextInFocus == null || !nextInFocus.hasParent(detailsPanel)) hovered.set(None)
       else childFocused = true
     }
 
-    def selected: T = rows(getSelectedRow)
-
-    setSelectAction(() => onSelect(selected))
+    setSelectAction(() => onSelect(rows(getSelectedRow)))
 
     setTableCellRenderer(new DefaultTableCellRenderer[String]() {
       override def applyStyle(table: Table[String], cellValue: String, columnIndex: Int, rowIndex: Int, isSelected: Boolean, textGUIGraphics: TextGUIGraphics): Unit = {
@@ -63,10 +52,10 @@ class TableWithDetails[T](rows: Seq[T], headers: Seq[String], rowMapperLambda: T
 
       if (parent != Interactable.Result.UNHANDLED) {
         if (parent == Interactable.Result.HANDLED)
-          setDetailsPanel(rows(getSelectedRow))
+          hovered.set(Some(rows(getSelectedRow)))
         parent
       } else {
-        keyHandler(keyStroke, selected)
+        keyHandler(keyStroke, rows(getSelectedRow))
       }
 
     }
@@ -97,6 +86,7 @@ class TableWithDetails[T](rows: Seq[T], headers: Seq[String], rowMapperLambda: T
 
 
   addComponent(table, LinearLayout.createLayoutData(LinearLayout.Alignment.Center))
+  if (addDetailsPanel) addComponent(detailsPanel, LinearLayout.createLayoutData(LinearLayout.Alignment.Center))
 
   override def nextFocus(fromThis: Interactable): Interactable = super.nextFocus(fromThis)
 }

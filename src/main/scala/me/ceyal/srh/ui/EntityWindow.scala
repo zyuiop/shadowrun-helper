@@ -62,8 +62,8 @@ object EntityWindow {
           else s
         }
         val lines: Iterable[String] = skill.specialization.map(spe => s"Spécialisation (+2d): $spe") ++ skill.mastery.map(mas => s"Maîtrise (+3d): $mas") ++ altStats
-        val labels = lines.map(s => new Label(foldText(s, table.getPreferredSize.getColumns))).toSeq
-        Panels.vertical(labels: _*)
+        val labels: Seq[Component] = lines.map(s => new Label(foldText(s, table.getPreferredSize.getColumns))).toSeq
+        Panels.vertical(labels prepended new EmptySpace: _*)
       }
     }
   }
@@ -111,6 +111,7 @@ object EntityWindow {
 
       override def createDetailsBlock(spell: Spell): Container = {
         Panels.vertical(
+          new EmptySpace(),
           new Label("Détails du sort:").addStyle(SGR.BOLD).addStyle(SGR.UNDERLINE),
           new Label(foldText(spell.description, table.getPreferredSize.getColumns))
 

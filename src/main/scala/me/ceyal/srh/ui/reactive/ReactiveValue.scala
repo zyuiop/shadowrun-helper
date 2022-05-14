@@ -54,4 +54,9 @@ trait ReactiveValue[T] {
   }
 
   def ==>[U <: Component](map: T => U) = new ReactiveComponent[T, U](this, map)
+
+  def <==(other: ReactiveValue[T]): ReactiveValue[T] = {
+    other.addListener((nv, _) => this.set(nv))
+    this
+  }
 }

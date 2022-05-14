@@ -2,7 +2,7 @@ package me.ceyal.srh.ui
 
 import com.googlecode.lanterna.gui2.Window.Hint
 import com.googlecode.lanterna.gui2.dialogs.ListSelectDialogBuilder
-import com.googlecode.lanterna.gui2.{BasicWindow, BorderLayout, Button, Container, Direction, GridLayout, Interactable, LinearLayout, Panels, Window, WindowListenerAdapter}
+import com.googlecode.lanterna.gui2.{BasicWindow, BorderLayout, Button, Container, Direction, GridLayout, Interactable, LinearLayout, Panels, SplitPanel, Window, WindowListenerAdapter}
 import com.googlecode.lanterna.input.{KeyStroke, KeyType}
 import me.ceyal.srh.Main
 import me.ceyal.srh.data.Dimensions
@@ -27,11 +27,15 @@ class EntityListWindow(entities: Seq[ReactiveValue[GameEntity]], title: Option[S
 
   title.foreach(setTitle)
 
+
+
   // TODO make this table reactive somehow...
-  val tbl = onChange ==> (_ => new TableWithDetails(
+  val tbl = new TableWithDetails(
     rows = entities,
     headers = Seq("Nom", "Initiative"), // TODO: more stuff!
-    detailsPosition = Direction.HORIZONTAL
+    detailsPosition = Direction.HORIZONTAL,
+
+    addDetailsPanel = false
   ) {
     override def onSelect(selected: ReactiveValue[GameEntity]): Unit =
       Main.gui.addWindowAndWait(new EntityWindow(selected))
@@ -51,7 +55,7 @@ class EntityListWindow(entities: Seq[ReactiveValue[GameEntity]], title: Option[S
 
     override def createDetailsBlock(value: ReactiveValue[GameEntity]): Container =
       EntityWindow.entityPanel(value, withFrame = true)
-  })
+  }
 
   def rollInit(): Unit = {
     val dim = new ListSelectDialogBuilder[Dimension]()
@@ -75,7 +79,11 @@ class EntityListWindow(entities: Seq[ReactiveValue[GameEntity]], title: Option[S
 
   setComponent(
     Panels.vertical(
-      tbl, btnBar
+      Panels.horizontal(
+        tbl.setLayoutData(LinearLayout.createLayoutData(LinearLayout.Alignment.Fill, LinearLayout.GrowPolicy.CanGrow)),
+        tbl.detailsPanel.setLayoutData(LinearLayout.createLayoutData(LinearLayout.Alignment.Fill, LinearLayout.GrowPolicy.CanGrow))
+      ).setLayoutData(LinearLayout.createLayoutData(LinearLayout.Alignment.Fill, LinearLayout.GrowPolicy.CanGrow)),
+      btnBar
     )
   )
 
