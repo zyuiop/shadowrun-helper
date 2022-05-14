@@ -1,5 +1,6 @@
 package me.ceyal.srh.data
 
+import me.ceyal.srh.data.components.HasEnemyId
 import me.ceyal.srh.data.entities.GameEntity
 import me.ceyal.srh.ui.EntityListWindow
 import me.ceyal.srh.ui.reactive.ReactiveValue
@@ -20,14 +21,16 @@ package object repositories {
   implicit val rosterEnemyFormat: OFormat[RosterEnemy] = Json.format[RosterEnemy]
   type Roster = List[RosterEnemy]
 
-  case class Scene(entities: List[GameEntity])
+  case class Scene(entities: Seq[GameEntity])
 
   object Scene {
     def fromRoster(roster: Roster): Scene = {
       val enemies = roster.flatMap(enemy =>
         EnemiesRepository.readFromFile(new File(enemy.path)).asOpt.toList
           .flatMap(entity => (1 to enemy.quantity).map(_ => entity))
-      )
+      ).zipWithIndex.map {
+        case (entity, id) => entity.withComponents(HasEnemyId(s"${id + 1}"))
+      }
 
       Scene(enemies)
     }

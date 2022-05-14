@@ -21,8 +21,8 @@ class MainWindow(gui: WindowBasedTextGUI) extends BasicWindow {
   setHints(List(Hint.FULL_SCREEN, Hint.NO_DECORATIONS, Hint.CENTERED).asJava)
 
   private def openScene(scene: ReactiveValue[Scene]) = {
-    val entities = scene.map[List[GameEntity]](_.entities, (o, nv) => o.copy(entities = nv))
-    gui.addWindowAndWait(new EntityListWindow(entities.values, Some("Vue scène")))
+    val entities: ReactiveValue[Seq[GameEntity]] = scene.map(_.entities, (o, nv) => o.copy(entities = nv))
+    gui.addWindowAndWait(new EntityListWindow(entities, Some("Vue scène")))
   }
 
   private def sceneFromRoster(): Unit =
@@ -65,10 +65,6 @@ class MainWindow(gui: WindowBasedTextGUI) extends BasicWindow {
         close()
       } else if (key.getCharacter == 'r') {
         println(DiceRollTable.promptAndDialog(gui))
-      } else if (key.getCharacter == 't') {
-        // for "test"
-        // gui.addWindowAndWait(new EntityWindow(Enemies.head))
-        gui.addWindowAndWait(new EntityListWindow(Enemies.map(ReactiveValue.of[GameEntity]) ++ Enemies.map(ReactiveValue.of[GameEntity])))
       } else if (key.getCharacter == 'o' && key.isCtrlDown) {
         loadOpenScene()
       }else if (key.getCharacter == 'n' && key.isCtrlDown) {

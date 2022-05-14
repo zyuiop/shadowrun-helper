@@ -11,6 +11,19 @@ object ReactiveValue {
   }
 
   def of[T](t: T): ReactiveValue[T] = new ReactiveValueImpl[T](t)
+
+  def immutable[T](t: T): ReactiveValue[T] = new ReactiveValue[T] {
+    override def get: T = t
+
+    override def set(other: T): ReactiveValue[T] = throw new UnsupportedOperationException()
+
+    override def addListener(listener: ChangeListener[T]): ReactiveValue[T] = {
+      listener.onChange(t, t)
+      this
+    }
+
+    override def removeListener(listener: ChangeListener[T]): ReactiveValue[T] = this
+  }
 }
 
 trait ReactiveValue[T] {
@@ -43,6 +56,7 @@ trait ReactiveValue[T] {
           if (nu != pu) listener.onChange(nu, pu)
         })
         parent.addListener(tListener)
+        listener.onChange(mapping(parent.get), mapping(parent.get))
         this
       }
 

@@ -79,6 +79,12 @@ package object components {
   implicit val hasEnemyLevelClazz: ComponentTag[HasEnemyLevel] = classOf[HasEnemyLevel]
   implicit val hasEnemyLevelFormat: Format[HasEnemyLevel] = format[HasEnemyLevel]
 
+  /** Used to identify ennemies uniquely */
+  case class HasEnemyId(id: String) extends Component
+
+  implicit val hasEnemyIdClazz: ComponentTag[HasEnemyId] = classOf[HasEnemyId]
+  implicit val hasEnemyIdFormat: Format[HasEnemyId] = format[HasEnemyId]
+
   case class HasName(name: String) extends Component
 
   implicit val hasNameClazz: ComponentTag[HasName] = classOf[HasName]

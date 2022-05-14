@@ -2,37 +2,35 @@ package me.ceyal.srh.ui
 
 import com.googlecode.lanterna.gui2.Window.Hint
 import com.googlecode.lanterna.gui2.dialogs.ListSelectDialogBuilder
-import com.googlecode.lanterna.gui2.{BasicWindow, BorderLayout, Button, Container, Direction, GridLayout, Interactable, LinearLayout, Panels, SplitPanel, Window, WindowListenerAdapter}
+import com.googlecode.lanterna.gui2.table.{DefaultTableCellRenderer, Table}
+import com.googlecode.lanterna.gui2.{BasicWindow, BorderLayout, Button, Container, Direction, GridLayout, Interactable, LinearLayout, Panels, SplitPanel, TextGUIGraphics, Window, WindowListenerAdapter}
 import com.googlecode.lanterna.input.{KeyStroke, KeyType}
 import me.ceyal.srh.Main
 import me.ceyal.srh.data.Dimensions
 import me.ceyal.srh.data.Dimensions.Dimension
-import me.ceyal.srh.data.components.{EntityWithDamageMonitor, HasEnemyLevel, HasInitiative, HasName}
+import me.ceyal.srh.data.components.{EntityWithDamageMonitor, HasDamageMonitor, HasEnemyId, HasEnemyLevel, HasInitiative, HasName}
 import me.ceyal.srh.data.entities.GameEntity
-import me.ceyal.srh.data.gear.Weapons.{Physical, Stunning}
+import me.ceyal.srh.data.gear.Weapons.{DamageTypes, Physical, Stunning}
 import me.ceyal.srh.random.Dices
 import me.ceyal.srh.ui.EntityWindow.entityPanel
 import me.ceyal.srh.ui.components.TableWithDetails
-import me.ceyal.srh.ui.reactive.ReactiveValue
+import me.ceyal.srh.ui.reactive.{ReactiveComponentTool, ReactiveValue}
 import me.ceyal.srh.util.NamedGameEntity
 
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.jdk.CollectionConverters.SeqHasAsJava
 
 
-class EntityListWindow(entities: Seq[ReactiveValue[GameEntity]], title: Option[String] = None) extends BasicWindow {
+class EntityListWindow(entitiesReactive: ReactiveValue[Seq[GameEntity]], title: Option[String] = None) extends BasicWindow {
   setHints(List(Hint.CENTERED).asJava)
 
   val onChange = ReactiveValue.of(0)
-
   title.foreach(setTitle)
-
-
 
   // TODO make this table reactive somehow...
   val tbl = new TableWithDetails(
-    rows = entities,
-    headers = Seq("Nom", "Initiative"), // TODO: more stuff!
+    reactiveRows = entitiesReactive,
+    headers = Seq("#", "Nom", "Init", "Vie"), // TODO: more stuff!
     detailsPosition = Direction.HORIZONTAL,
 
     addDetailsPanel = false
@@ -50,8 +48,22 @@ class EntityListWindow(entities: Seq[ReactiveValue[GameEntity]], title: Option[S
       } else Interactable.Result.UNHANDLED
     }
 
-    override def createRow(elem: ReactiveValue[GameEntity]): Seq[String] =
-      Seq(elem.get.name, elem.get.componentOpt[HasInitiative].flatMap(_.rolledValue).map(_.toString).getOrElse("?"))
+    override def createRow(elem: GameEntity): Seq[String] = {
+      val damages = elem.components[HasDamageMonitor].map { mon =>
+        val damageMon = if (mon.maxValue == mon.currentValue) "xxx" else (mon.maxValue - mon.currentValue).toString
+        mon.damageType match {
+          case Some(DamageTypes.Stunning) => s"${damageMon}E"
+          case Some(DamageTypes.Physical) => s"${damageMon}P"
+          case None => damageMon
+        }}.mkString(" / ")
+
+      Seq(
+        elem.componentOpt[HasEnemyId].map(_.id).getOrElse("?"),
+        elem.name,
+        elem.componentOpt[HasInitiative].flatMap(_.rolledValue).map(_.toString).getOrElse("?"),
+        damages
+      )
+    }
 
     override def createDetailsBlock(value: ReactiveValue[GameEntity]): Container =
       EntityWindow.entityPanel(value, withFrame = true)
@@ -65,10 +77,10 @@ class EntityListWindow(entities: Seq[ReactiveValue[GameEntity]], title: Option[S
       .build().showDialog(getTextGUI)
 
     if (dim != null) {
-      entities.foreach(enr => enr.update(en => en.mapAll[HasInitiative](init => {
-        val roll = Dices.launchDices(init.getDices(dim)).sum + init.initiative(en)
+      entitiesReactive.update(_.map(enr => enr.mapAll[HasInitiative](init => {
+        val roll = Dices.launchDices(init.getDices(dim)).sum + init.initiative(enr)
         init.copy(rolledValue = Some(roll))
-      })))
+      })).sortBy(_.componentOpt[HasInitiative].flatMap(_.rolledValue).getOrElse(0)).reverse)
       onChange.update(_ + 1)
     }
   }

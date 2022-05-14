@@ -41,12 +41,12 @@ object EntityWindow {
       ()
     }
 
-    new TableWithDetails[SkillLevel](skills.skills.values.toSeq, Seq("Nom", "Niveau", "Attribut", "Dés")) {
-      override def onSelect(selected: SkillLevel): Unit = launchDices(selected)
+    new TableWithDetails(ReactiveValue.immutable(skills.skills.values.toSeq), Seq("Nom", "Niveau", "Attribut", "Dés")) {
+      override def onSelect(selected: ReactiveValue[SkillLevel]): Unit = launchDices(selected.get)
 
-      override def keyHandler(key: KeyStroke, selected: SkillLevel): Result = {
+      override def keyHandler(key: KeyStroke, selected: ReactiveValue[SkillLevel]): Result = {
         if (key.getCharacter == 'r') {
-          launchDices(selected)
+          launchDices(selected.get)
           Result.HANDLED
         } else Result.UNHANDLED
       }
@@ -54,7 +54,9 @@ object EntityWindow {
       override def createRow(skill: SkillLevel): Seq[String] =
         Seq(skill.skill.name, skill.level.toString, skill.skill.mainStat.abbr, skills.dicesForSkill(entity)(skill.skill).toString)
 
-      override def createDetailsBlock(skill: SkillLevel): Container = {
+      override def createDetailsBlock(skillRV: ReactiveValue[SkillLevel]): Container = {
+        val skill = skillRV.get
+
         val altStats: Seq[String] = {
           val s: Seq[String] = skill.skill.alternativeStat.toSeq.map { case (usecase, attr) => s"${attr.abbr}: $usecase" }
 
@@ -70,7 +72,7 @@ object EntityWindow {
 
 
   def magicTable(reactiveEntity: ReactiveValue[GameEntity], magic: HasMagic) = {
-    new TableWithDetails[Spell](magic.spells, Seq("Nom", "Type", "Portée", "Durée", "Drain")) {
+    new TableWithDetails[Spell](ReactiveValue immutable magic.spells, Seq("Nom", "Type", "Portée", "Durée", "Drain")) {
       // override def onSelect(selected: SkillLevel): Unit = launchDices(selected)
 
       def drainDamage(spell: Spell) = {
@@ -94,26 +96,26 @@ object EntityWindow {
         }
       }
 
-      override def keyHandler(key: KeyStroke, selected: Spell): Result = {
+      override def keyHandler(key: KeyStroke, selected: ReactiveValue[Spell]): Result = {
         if (key.getCharacter == 'r') {
           // launchDices(selected)
           Result.HANDLED
         } else if (key.getCharacter == 'd') {
-          drainDamage(selected)
+          drainDamage(selected.get)
           Result.HANDLED
         } else Result.UNHANDLED
       }
 
-      override def onSelect(selected: Spell): Unit = drainDamage(selected)
+      override def onSelect(selected: ReactiveValue[Spell]): Unit = drainDamage(selected.get)
 
       override def createRow(spell: Spell): Seq[String] =
         Seq(spell.name, spell.spellType.toString, spell.range.toString, spell.duration.toString, spell.drain.toString)
 
-      override def createDetailsBlock(spell: Spell): Container = {
+      override def createDetailsBlock(spell: ReactiveValue[Spell]): Container = {
         Panels.vertical(
           new EmptySpace(),
           new Label("Détails du sort:").addStyle(SGR.BOLD).addStyle(SGR.UNDERLINE),
-          new Label(foldText(spell.description, table.getPreferredSize.getColumns))
+          new Label(foldText(spell.get.description, table.getPreferredSize.getColumns))
 
           // TODO: add kind specific spell details
         )
