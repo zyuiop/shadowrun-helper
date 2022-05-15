@@ -2,7 +2,8 @@ package me.ceyal.srh.data
 
 import me.ceyal.srh.data.Attributs.Attribut
 import me.ceyal.srh.data.gear.Weapons.DamageEffects.{Chemical, DamageEffect}
-import me.ceyal.srh.data.gear.Weapons.{DamageType, Stunning}
+import me.ceyal.srh.data.gear.Weapons.DamageTypes.DamageType
+import me.ceyal.srh.data.gear.Weapons.{Stunning}
 import me.ceyal.srh.data.gear.Weapons.{Physical => DmgPhysical}
 import me.ceyal.srh.data.spells.MagicTraditions.MagicTradition
 import me.ceyal.srh.util.{EnumValueBase, enumOfEnumFormat}

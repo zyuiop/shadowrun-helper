@@ -5,7 +5,8 @@ import me.ceyal.srh.data.Dimensions.Dimension
 import me.ceyal.srh.data.components.HasDamageMonitor.forDamageType
 import me.ceyal.srh.data.entities.GameEntity
 import me.ceyal.srh.data.gear.InventoryItem
-import me.ceyal.srh.data.gear.Weapons.{DamageType, Physical, Stunning}
+import me.ceyal.srh.data.gear.Weapons.DamageTypes.DamageType
+import me.ceyal.srh.data.gear.Weapons.{Physical, Stunning, Weapon}
 import me.ceyal.srh.data.skills.Competences.{Competence, Sorcellerie}
 import me.ceyal.srh.data.skills.{SorcellerieSpecs, Specialization}
 import me.ceyal.srh.data.spells.MagicTraditions.{Chamanism, Hermetism, MagicTradition}
@@ -37,6 +38,14 @@ package object components {
 
   case class HasInventory(inventory: List[InventoryItem]) extends Component with AttributeModifier {
     def attributeModifier(attr: Attribut): Int = inventory.map(_.attrModifiers.getOrElse(attr, 0)).sum
+
+    val (weapons, nonWeapons): (List[Weapon], List[InventoryItem]) = {
+      val (w, n) = inventory.partition(_.isInstanceOf[Weapon])
+      w.map(_.asInstanceOf[Weapon]) -> n
+    }
+
+    def updateWeapons(newWeapons: List[Weapon]) = copy(inventory = newWeapons ::: nonWeapons)
+    def updateNonWeapons(newEquipment: List[InventoryItem]) = copy(inventory = newEquipment ::: weapons)
 
     override val tags: Set[ComponentTag[_ <: Component]] = Set(getClass, AttributeModifierTag)
   }

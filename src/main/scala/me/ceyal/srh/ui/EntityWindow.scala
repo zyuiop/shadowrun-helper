@@ -8,9 +8,9 @@ import com.googlecode.lanterna.gui2.dialogs.{ListSelectDialogBuilder, MessageDia
 import com.googlecode.lanterna.gui2.table.Table
 import com.googlecode.lanterna.input.{KeyStroke, KeyType}
 import me.ceyal.srh.Main
-import me.ceyal.srh.data.components.{EntityWithDamageMonitor, HasDamageMonitor, HasMagic, HasSkills}
+import me.ceyal.srh.data.components.{EntityWithDamageMonitor, HasDamageMonitor, HasInventory, HasMagic, HasSkills}
 import me.ceyal.srh.data.entities.GameEntity
-import me.ceyal.srh.data.gear.Weapons.{Physical, Stunning}
+import me.ceyal.srh.data.gear.Weapons.{Physical, Ranges, Stunning, Weapon}
 import me.ceyal.srh.data.spells.Spell
 import me.ceyal.srh.data.{AttrBlock, Attributs, SkillLevel}
 import me.ceyal.srh.ui.EntityWindow.entityPanel
@@ -123,6 +123,49 @@ object EntityWindow {
     }
   }
 
+  def weaponsTable(reactiveEntity: ReactiveValue[GameEntity]) = {
+    val weapons: ReactiveValue[Seq[Weapon]] = reactiveEntity.map(_.component[HasInventory].weapons.toSeq, (e, w) => e.mapAll[HasInventory](i => i.updateWeapons(w.toList)))
+
+    new TableWithDetails[Weapon](weapons, Seq("Nom", "Compétence", "SO", "Dégats")) {
+      // override def onSelect(selected: SkillLevel): Unit = launchDices(selected)
+
+      def attack(w: Weapon) = {
+        val range = RangeDialog(Main.gui, "Choisir la portée de l'attaque")
+
+        if (range.isDefined) {
+          val dices = DiceRollTable.dialog(Main.gui, w.atkScore(range.get, reactiveEntity.get), "Score offensif")
+          val succ = dices.count(_ > 4)
+          new MessageDialogBuilder().setTitle("Attribution de l'atout")
+            .setText("Atout à l'attaquant si SD <= " + (succ - 4) + "\nAtout au défenseur si SD >= " + (succ + 4))
+            .build().showDialog(Main.gui)
+
+          val atkDices = reactiveEntity.get.component[HasSkills].dicesForSkill(reactiveEntity.get)(w.baseSkill, w.usageSpecialization)
+
+          DiceRollTable.dialog(Main.gui, atkDices, "Attaque (dégats " + w.damageValue(reactiveEntity.get) + w.damageType.abridged + w.hitEffects.mkString + ")")
+        }
+      }
+
+      override def keyHandler(key: KeyStroke, selected: ReactiveValue[Weapon]): Result = {
+        // TODO
+        Result.UNHANDLED
+      }
+
+      override def onSelect(selected: ReactiveValue[Weapon]): Unit = attack(selected.get)
+
+      override def createRow(weapon: Weapon): Seq[String] = {
+        Seq(weapon.name,
+          weapon.baseSkill + weapon.usageSpecialization.map(sp => s" (${sp.toString})").getOrElse(""),
+          Ranges.values.toList.sortBy(_.id).map(v => weapon.atkScore(v, reactiveEntity.get)).map(v => if (v == 0) "-" else v.toString).mkString("/"),
+          weapon.damageValue(reactiveEntity.get) + weapon.damageType.abridged
+        )
+      }
+
+      override def createDetailsBlock(spell: ReactiveValue[Weapon]): Container = {
+        Panels.vertical() // TODO
+      }
+    }
+  }
+
   def damageGauges(dmg: ReactiveValue[Seq[HasDamageMonitor]]): Container = dmg ==> { dmgSeq =>
     def damageGauge(mon: HasDamageMonitor) = Seq(
       new Label(mon.damageType.map(_.toString).getOrElse("Tous")),
@@ -174,6 +217,14 @@ object EntityWindow {
         .setLayoutData(LinearLayout.createLayoutData(LinearLayout.Alignment.Center))
     })
 
+    println(entity.components[HasInventory])
+    println(entity.components[HasInventory].map(_.weapons))
+
+    if (entity.components[HasInventory].exists(_.weapons.nonEmpty)) {
+      panel.addComponent(weaponsTable(reactiveEntity).withBorder(Borders.singleLine("Armes")), LinearLayout.createLayoutData(LinearLayout.Alignment.Center)
+      )
+    }
+
     entity.components[HasMagic].foreach(magicComponent => {
       panel addComponent withShortcut('m', magicTable(reactiveEntity, magicComponent).withBorder(Borders.singleLine(s"Magie (${magicComponent.tradition})")))
         .setLayoutData(LinearLayout.createLayoutData(LinearLayout.Alignment.Center))
@@ -184,6 +235,7 @@ object EntityWindow {
       panel.addComponent(damageGauges(reactiveDmg).withBorder(Borders.singleLine("Moniteurs d'état")), LinearLayout.createLayoutData(LinearLayout.Alignment.Center)
       )
     }
+
 
     if (withFrame) panel.withBorder(Borders.singleLine(entity.name))
     else panel

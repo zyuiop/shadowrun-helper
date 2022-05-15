@@ -74,7 +74,7 @@ object DiceRollTable {
     DiceRollTable.dialog(gui, skills.dicesWithSkill(entity)(attr, skill.skill) + bonus)
   }
 
-  def dialog(gui: WindowBasedTextGUI, dices: Int): Seq[Int] = new DialogWindow("Jets de dés") {
+  def dialog(gui: WindowBasedTextGUI, dices: Int, title: String = "Jets de dés"): Seq[Int] = new DialogWindow(title) {
     setHints(Seq(Hint.CENTERED).asJava)
 
     val dtr = DiceRollTable(dices)

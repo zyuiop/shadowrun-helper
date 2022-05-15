@@ -3,9 +3,10 @@ package me.ceyal.srh.data
 import me.ceyal.srh.data.Attributs._
 import me.ceyal.srh.data.components._
 import me.ceyal.srh.data.Dimensions.{Dimension, Overworld, Astral => DimAstral}
-import me.ceyal.srh.data.gear.Weapons.{DamageType, MeleeWeapons, Physical, Stunning}
+import me.ceyal.srh.data.gear.Weapons.{MeleeWeapons, Physical, Stunning}
 import me.ceyal.srh.data.gear.InventoryItem
 import me.ceyal.srh.data.gear.MiscItems.Commlink
+import me.ceyal.srh.data.gear.Weapons.DamageTypes.DamageType
 import me.ceyal.srh.data.skills.Competences.{Competence, _}
 import me.ceyal.srh.data.skills.InfluenceSpecs
 import me.ceyal.srh.data.spells.MagicTraditions.Chamanism
@@ -85,13 +86,13 @@ package object entities {
         Constitution -> 2, Agilité -> 2, Réaction -> 2, Force -> 2, Volonté -> 2, Logique -> 2, Intuition -> 2, Charisme -> 1, Essence -> 6000, DésInitiative -> 1
       ), List(
         SkillLevel(Athletisme, 1), SkillLevel(CombatRapproche, 3), SkillLevel(Influence, 1, Some(InfluenceSpecs.Intimidation))
-      ), List(MeleeWeapons.Massue, Commlink(1))),
+      ), List(MeleeWeapons.Massue, MeleeWeapons.AMainsNues, Commlink(1))),
 
       baseEnemy("Chaman TerraFirst !", 0, Map(
         Constitution -> 1, Agilité -> 2, Réaction -> 3, Force -> 2, Volonté -> 3, Logique -> 2, Intuition -> 2, Charisme -> 2, Magie -> 2, Essence -> 6000
       ), List(
         SkillLevel(Astral, 2), SkillLevel(Conjuration, 2), SkillLevel(Sorcellerie, 2)
-      ), initiativeDices = Map(DimAstral -> 2)).withComponents(
+      ), initiativeDices = Map(DimAstral -> 2), inventory = List(MeleeWeapons.AMainsNues)).withComponents(
         HasMagic(Chamanism, List(
           HealingSpells.Antidote, HealingSpells.SoinsPurificateurs, CombatSpells.FlotAcide, CombatSpells.Deflagration
         )),
