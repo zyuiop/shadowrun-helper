@@ -1,18 +1,21 @@
 package me.ceyal.srh.data.gear
 
-import me.ceyal.srh.data.{AttrBlock, AttrGetter, Attributs}
+import me.ceyal.srh.data.{AttrBlock, AttrGetter, Attributs, Dimensions}
 import me.ceyal.srh.data.Attributs.Attribut
+import me.ceyal.srh.data.Dimensions.Dimension
 import me.ceyal.srh.data.gear.Weapons.Ranges.Courte
+import me.ceyal.srh.data.repositories.loadEnum
 import me.ceyal.srh.data.skills.AthletismeSpecs.Archerie
 import me.ceyal.srh.data.skills.CloseCombatWeaponKind._
 import me.ceyal.srh.data.skills.Competences.{Athletisme, CombatRapproche, Competence}
 import me.ceyal.srh.data.skills.FirearmKinds._
 import me.ceyal.srh.data.skills.ExoticWeaponsKinds._
 import me.ceyal.srh.data.skills.{AthletismeSpecs, CloseCombatWeaponKind, Competences, ExoticWeaponsKinds, SpecializationsSet}
-import play.api.libs.json.{Format, Json}
+import me.ceyal.srh.util.{EnumValueBase, enumOfEnumFormat}
+import play.api.libs.json.{Format, JsString, Json, KeyReads, KeyWrites}
 
 object Weapons {
-  trait WeaponKind
+  trait WeaponKind extends EnumValueBase
 
   object DamageTypes extends Enumeration {
     type DamageType = Value
@@ -21,40 +24,49 @@ object Weapons {
     val Stunning = Value("Étourdissants")
   }
 
+  object DamageEffects extends Enumeration {
+    type DamageEffect = Value
+
+    val Electrocute = Value("Électrocution")
+    val Chemical = Value("Physiques")
+  }
+  import DamageEffects._
+
   type DamageType = DamageTypes.DamageType
   val Physical = DamageTypes.Physical
   val Stunning = DamageTypes.Stunning
   implicit val damageTypeFormat: Format[DamageType] = Json.formatEnum(DamageTypes)
+  implicit val WeaponKindFormat: Format[WeaponKind] = enumOfEnumFormat[WeaponKind]
+  implicit val DamageEffectsFormat: Format[DamageEffect] = Json.formatEnum(DamageEffects)
 
-  sealed trait Effect {
-    // TODO: for electrocution and stuff
-  }
-  case object Electrocute extends Effect
-  case object Chemical extends Effect
 
   object Ranges extends Enumeration {
-    case class Range(description: String) extends super.Val
+    type Range = Value
 
-    val Proche = Range("0 à 3 mètres")
-    val Courte = Range("4 à 50 mètres")
-    val Moyenne = Range("51 à 250 mètres")
-    val Longue = Range("251 à 500 mètres")
-    val Extreme = Range("500+ mètres")
+    val Proche = Value("0 à 3 mètres")
+    val Courte = Value("4 à 50 mètres")
+    val Moyenne = Value("51 à 250 mètres")
+    val Longue = Value("251 à 500 mètres")
+    val Extreme = Value("500+ mètres")
   }
+  implicit val RangesFormat: Format[Ranges.Range] = Json.formatEnum(Ranges)
+  implicit val RangesKeyReads: KeyReads[Ranges.Range] = KeyReads(a => RangesFormat.reads(JsString(a)))
+  implicit val RangesKeyWrites: KeyWrites[Ranges.Range] = KeyWrites(a => RangesFormat.writes(a).validate[String].get)
+
 
   trait Weapon extends InventoryItem {
     def atkScore(range: Ranges.Range, holderAttr: AttrGetter): Int
     def damageDices(holderAttr: AttrGetter): Int
 
     val damageType: DamageType
-    val hitEffects: Set[Effect]
+    val hitEffects: Set[DamageEffect]
 
     val usageSpecialization: Option[WeaponKind] = None
     val baseSkill: Competence
   }
 
   object MeleeWeapons extends Enumeration {
-    case class MeleeWeapon(name: String, spec: WeaponKind, dices: Int, atkScore: Int, damageType: DamageType = Physical, hitEffects: Set[Effect] = Set(), moreAtkScores: Map[Ranges.Range, Int] = Map(), baseSkill: Competence = Competences.CombatRapproche) extends super.Val(name) with Weapon {
+    case class MeleeWeapon(name: String, spec: WeaponKind, dices: Int, atkScore: Int, damageType: DamageType = Physical, hitEffects: Set[DamageEffect] = Set(), moreAtkScores: Map[Ranges.Range, Int] = Map(), baseSkill: Competence = Competences.CombatRapproche) extends super.Val(name) with Weapon {
       override def atkScore(range: Ranges.Range, holderAttr: AttrGetter): Int = {
         if (range == Ranges.Proche) atkScore + holderAttr(if (baseSkill == CombatRapproche) Attributs.Force else Attributs.Réaction)
         else moreAtkScores.getOrElse(range, 0)
@@ -95,10 +107,14 @@ object Weapons {
 
     val Fouet = MeleeWeapon("Fouet", ExoticWeaponsKinds.Fouet, 1, 6, baseSkill = Competences.ArmesExotiques)
     val FouetMonofil = MeleeWeapon("Fouet monofilament", ExoticWeaponsKinds.FouetMonofilament, 4, 14, baseSkill = Competences.ArmesExotiques)
+
+    loadEnum[MeleeWeapon]("weapons/melee")(Json.reads[MeleeWeapon])
   }
 
+  println(MeleeWeapons.values.map(v => v.id -> v.toString))
+
   object ThrowableWeapons extends Enumeration {
-    case class ThrowableWeapon(name: String, spec: WeaponKind, dices: Int, atkScores: (Int, Int, Int, Int), damageType: DamageType = Physical, hitEffects: Set[Effect] = Set(), moreAtkScores: Map[Ranges.Range, Int] = Map(), baseSkill: Competence = Competences.CombatRapproche) extends this.Val(name) with Weapon {
+    case class ThrowableWeapon(name: String, spec: WeaponKind, dices: Int, atkScores: (Int, Int, Int, Int), damageType: DamageType = Physical, hitEffects: Set[DamageEffect] = Set(), moreAtkScores: Map[Ranges.Range, Int] = Map(), baseSkill: Competence = Competences.CombatRapproche) extends this.Val(name) with Weapon {
       override def atkScore(range: Ranges.Range, holderAttr: AttrGetter): Int = {
         if (range == Ranges.Proche) atkScores._1
         else if (range == Ranges.Courte) atkScores._2

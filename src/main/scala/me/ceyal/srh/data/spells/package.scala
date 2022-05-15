@@ -1,7 +1,8 @@
 package me.ceyal.srh.data
 
 import me.ceyal.srh.data.Attributs.Attribut
-import me.ceyal.srh.data.gear.Weapons.{Chemical, DamageType, Effect, Stunning}
+import me.ceyal.srh.data.gear.Weapons.DamageEffects.{Chemical, DamageEffect}
+import me.ceyal.srh.data.gear.Weapons.{DamageType, Stunning}
 import me.ceyal.srh.data.gear.Weapons.{Physical => DmgPhysical}
 import me.ceyal.srh.data.spells.MagicTraditions.MagicTradition
 import me.ceyal.srh.util.{EnumValueBase, enumOfEnumFormat}
@@ -54,7 +55,7 @@ package object spells {
   }
 
   object CombatSpells extends Enumeration {
-    case class CombatSpell(name: String, combatType: CombatType, range: SpellRange, spellType: SpellType, duration: SpellDuration, drain: Int, damageType: DamageType, description: String, damageAdditional: Set[Effect] = Set()) extends super.Val(name) with Spell
+    case class CombatSpell(name: String, combatType: CombatType, range: SpellRange, spellType: SpellType, duration: SpellDuration, drain: Int, damageType: DamageType, description: String, damageAdditional: Set[DamageEffect] = Set()) extends super.Val(name) with Spell
 
     val FlotAcide = CombatSpell("Flot acide", IndirectCombat, LineOfSight, Physical, Instant, 5, DmgPhysical, "Inflige dmg Chimiques et l'état Corrodé (indice égal aux succès nets du test)", Set(Chemical))
     val VagueToxique = CombatSpell("Vague toxique", IndirectCombat, Zone, Physical, Instant, 6, DmgPhysical, "Inflige dmg Chimiques et l'état Corrodé (indice égal aux succès nets du test)", Set(Chemical))

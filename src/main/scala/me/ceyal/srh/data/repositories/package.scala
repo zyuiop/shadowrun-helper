@@ -2,9 +2,8 @@ package me.ceyal.srh.data
 
 import me.ceyal.srh.data.components.HasEnemyId
 import me.ceyal.srh.data.entities.GameEntity
-import me.ceyal.srh.ui.EntityListWindow
-import me.ceyal.srh.ui.reactive.ReactiveValue
-import play.api.libs.json.{Json, OFormat}
+import me.ceyal.srh.util.EnumValueBase
+import play.api.libs.json.{Json, OFormat, Reads}
 
 import java.io.File
 
@@ -14,6 +13,11 @@ package object repositories {
     val path = Seq(home, ".config", "shadowrun").mkString(System.getProperty("file.separator"))
     new File(path)
   }
+
+  def enumsPath = new File(basepath, "enumerations")
+
+  def loadEnum[T <: EnumValueBase](enumName: String)(implicit reads: Reads[T]) =
+    new EnumRepository[T](new File(enumsPath, enumName)).loadAll
 
   // def statesPath: File = new File(basepath, "states")
 

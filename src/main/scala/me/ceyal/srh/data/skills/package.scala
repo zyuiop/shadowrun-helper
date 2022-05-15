@@ -42,7 +42,7 @@ package object skills {
      * @param inexperienced if true, this can be used even with a level of 0 (at the cost of -1 dice)
      * @param alternativeStat
      */
-    case class Competence(name: String, mainStat: Attribut, specialization: SpecializationsSet, inexperienced: Boolean = true, alternativeStat: Map[String, Attribut] = Map.empty) extends super.Val {
+    case class Competence(name: String, mainStat: Attribut, specialization: SpecializationsSet, inexperienced: Boolean = true, alternativeStat: Map[String, Attribut] = Map.empty) extends super.Val(name) {
       def canUse(stats: AttrBlock) = true
     }
 
