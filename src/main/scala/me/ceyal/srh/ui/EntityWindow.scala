@@ -216,9 +216,6 @@ object EntityWindow {
         .setLayoutData(LinearLayout.createLayoutData(LinearLayout.Alignment.Center))
     })
 
-    println(entity.components[HasInventory])
-    println(entity.components[HasInventory].map(_.weapons))
-
     if (entity.components[HasInventory].exists(_.weapons.nonEmpty)) {
       panel.addComponent(weaponsTable(reactiveEntity).withBorder(Borders.singleLine("Armes")), LinearLayout.createLayoutData(LinearLayout.Alignment.Center)
       )

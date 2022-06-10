@@ -116,8 +116,6 @@ object Weapons {
     loadEnum[MeleeWeapon]("weapons/melee")(Json.reads[MeleeWeapon])
   }
 
-  println(MeleeWeapons.values.map(v => v.id -> v.toString))
-
   object ThrowableWeapons extends Enumeration {
     case class ThrowableWeapon(name: String, spec: WeaponKind with Specialization, dices: Int, atkScores: (Int, Int, Int, Int), damageType: DamageType = Physical, hitEffects: Set[DamageEffect] = Set(), moreAtkScores: Map[Ranges.Range, Int] = Map(), baseSkill: Competence = Competences.CombatRapproche) extends this.Val(name) with Weapon {
       override def atkScore(range: Ranges.Range, user: AttrGetter): Int = {
