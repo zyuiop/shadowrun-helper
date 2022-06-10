@@ -26,3 +26,7 @@ ennemies folder. These can be used to build roosters and scenes.
  - Handle scenes. A scene is a pack of ennemies _with some state_ (in particular health). 
    - This is useful for bookkeeping!
    - You can select an ennemy and press `[D]` to take one damage, `[H]` to heal one damage
+
+## Screenshots
+
+![Main Scene Window](img/img.png)
