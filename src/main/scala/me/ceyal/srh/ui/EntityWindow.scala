@@ -133,10 +133,9 @@ object EntityWindow {
         val range = RangeDialog(Main.gui, "Choisir la portée de l'attaque")
 
         if (range.isDefined) {
-          val dices = DiceRollTable.dialog(Main.gui, w.atkScore(range.get, reactiveEntity.get), "Score offensif")
-          val succ = dices.count(_ > 4)
+          val so = w.atkScore(range.get, reactiveEntity.get)
           new MessageDialogBuilder().setTitle("Attribution de l'atout")
-            .setText("Atout à l'attaquant si SD <= " + (succ - 4) + "\nAtout au défenseur si SD >= " + (succ + 4))
+            .setText("Atout à l'attaquant si SD <= " + (so - 4) + "\nAtout au défenseur si SD >= " + (so + 4))
             .build().showDialog(Main.gui)
 
           val atkDices = reactiveEntity.get.component[HasSkills].dicesForSkill(reactiveEntity.get)(w.baseSkill, w.usageSpecialization)
