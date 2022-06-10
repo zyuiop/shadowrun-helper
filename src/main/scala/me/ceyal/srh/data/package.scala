@@ -2,7 +2,7 @@ package me.ceyal.srh
 
 import me.ceyal.srh.data.Attributs.{Attribut, Value, valueToAttribut}
 import me.ceyal.srh.data.gear.InventoryItem
-import me.ceyal.srh.data.gear.Weapons.DamageType
+import me.ceyal.srh.data.gear.Weapons.DamageTypes
 import me.ceyal.srh.data.skills.Competences.Competence
 import me.ceyal.srh.data.skills.{Specialization, SpecializationsSet, competenceFormat}
 import play.api.libs.json.{DefaultReads, DefaultWrites, Format, JsString, Json, KeyReads, KeyWrites, Reads, Writes}
